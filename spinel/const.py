@@ -426,6 +426,32 @@ class SPINEL(object):
 
     PROP_CNTR__END = 0x800
 
+    PROP_RCP_EXT__BEGIN = 0x800
+
+    # RCP MAC Key.
+    # Format: `CCddd`
+    #    `C`: MAC key ID mode
+    #    `C`: MAC key ID
+    #    `d`: previous MAC key material data
+    #    `d`: current MAC key material data
+    #    `d`: next MAC key material data
+    PROP_RCP_MAC_KEY = PROP_RCP_EXT__BEGIN + 0
+
+    # MAC Frame Counter
+    # Format: `L` for read and `Lb` or `L` for write
+    #    `L`: MAC frame counter
+    #    'b': Optional boolean used only during write. If not provided, `false` is assumed.
+    #        If `true` counter is set only if the new value is larger than current value.
+    #        If `false` the new value is set as frame counter independent of the current value.
+    PROP_RCP_MAC_FRAME_COUNTER = PROP_RCP_EXT__BEGIN + 1
+    
+    # Timestamps when Spinel frame is received and transmitted
+    # Format: `X`
+    #    `X`: Spinel frame transmit timestamp
+    PROP_RCP_TIMESTAMP = PROP_RCP_EXT__BEGIN + 2
+    
+    PROP_RCP_EXT__END = 0x900
+
     PROP_NEST__BEGIN = 0x3BC0
     PROP_NEST_STREAM_MFG = PROP_NEST__BEGIN + 0  # < [U]
     PROP_NEST__END = 0x3C00

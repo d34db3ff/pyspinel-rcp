@@ -538,6 +538,12 @@ class SpinelPropertyHandler(SpinelCodec):
     def MAC_MAX_RETRY_NUMBER_INDIRECT(self, _, payload):
         return self.parse_C(payload)
 
+    def RCP_MAC_FRAME_COUNTER(self, _, payload):
+        return self.parse_L(payload)
+
+    def RCP_MAC_KEY(self, _, payload):
+        return self.parse_fields(payload, "CCddd")
+
     def NET_SAVED(self, _, payload):
         return self.parse_b(payload)
 
@@ -1029,7 +1035,11 @@ SPINEL_PROP_DISPATCH = {
     SPINEL.PROP_CNTR_MAC_RETRY_HISTOGRAM:
         WPAN_PROP_HANDLER.MAC_RETRY_HISTOGRAM,
     SPINEL.PROP_NEST_STREAM_MFG:
-        WPAN_PROP_HANDLER.NEST_STREAM_MFG
+        WPAN_PROP_HANDLER.NEST_STREAM_MFG,
+    SPINEL.PROP_RCP_MAC_FRAME_COUNTER:
+        WPAN_PROP_HANDLER.RCP_MAC_FRAME_COUNTER,
+    SPINEL.PROP_RCP_MAC_KEY:
+        WPAN_PROP_HANDLER.RCP_MAC_KEY
 }
 
 
@@ -1223,7 +1233,7 @@ class WpanApi(SpinelCodec):
 
             if item is None:
                 continue
-            if item.prop == _prop:
+            if item.prop == _prop or (item.prop == SPINEL.PROP_LAST_STATUS and item.value == 0):
                 break
 
             processed_queue.put_nowait(item)

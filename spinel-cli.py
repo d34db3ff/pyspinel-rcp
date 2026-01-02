@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 #
 #  Copyright (c) 2016-2019, The OpenThread Authors.
 #  All rights reserved.
@@ -39,6 +39,7 @@ import logging.config
 import logging.handlers
 
 from cmd import Cmd
+from struct import pack
 
 from spinel.const import SPINEL
 from spinel.const import kThread
@@ -181,8 +182,8 @@ class SpinelCliCmd(Cmd, SpinelCodec):
         if hasattr(stream, 'pipe'):
             self.wpan_api.queue_wait_for_prop(SPINEL.PROP_LAST_STATUS,
                                               SPINEL.HEADER_ASYNC)
-        self.prop_set_value(SPINEL.PROP_IPv6_ICMP_PING_OFFLOAD, 1)
-        self.prop_set_value(SPINEL.PROP_THREAD_RLOC16_DEBUG_PASSTHRU, 1)
+            
+        self.prop_set_value(SPINEL.PROP_PHY_ENABLED, 1)
 
     command_names = [
         # Shell commands
@@ -250,6 +251,10 @@ class SpinelCliCmd(Cmd, SpinelCodec):
         'ncp-tun',
         'ncp-raw',
         'ncp-filter',
+        
+        'saddr',
+        'mackey',
+        'framectr',
     ]
 
     @classmethod
@@ -414,7 +419,7 @@ class SpinelCliCmd(Cmd, SpinelCodec):
             elif (mixed_format == 'D') or (mixed_format == 'E'):
                 print(binascii.hexlify(value).decode('utf8'))
             elif mixed_format == 'H':
-                if prop_id == SPINEL.PROP_MAC_15_4_PANID:
+                if prop_id in (SPINEL.PROP_MAC_15_4_PANID, SPINEL.PROP_MAC_15_4_SADDR) :
                     print("0x%04x" % value)
                 else:
                     print("%04x" % value)
@@ -575,6 +580,65 @@ class SpinelCliCmd(Cmd, SpinelCodec):
         \033[0m
         """
         self.handle_property(line, SPINEL.PROP_PHY_CHAN)
+
+    def do_saddr(self, line):
+        """
+        \033[1msaddr\033[0m
+
+            Get the IEEE 802.15.4 short address.
+        \033[2m
+            > saddr
+            0x4242
+            Done
+        \033[0m
+        \033[1msaddr <802.15.4 short address>\033[0m
+
+            Set the IEEE 802.15.4 short address.
+        \033[2m
+            > saddr 0x4242
+            Done
+        \033[0m
+        """
+        self.handle_property(line, SPINEL.PROP_MAC_15_4_SADDR, 'H')
+
+    def do_framectr(self, line):
+        """
+        \033[1mframectr <802.15.4 MAC frame counter>\033[0m
+
+            Set the IEEE 802.15.4 MAC frame counter.
+        \033[2m
+            > framectr 0
+            Done
+        \033[0m
+        """
+        self.prop_set(SPINEL.PROP_RCP_MAC_FRAME_COUNTER, line, 'L', False)
+
+    def do_mackey(self, line):
+        """
+        \033[1mmackey <802.15.4 MAC Key>\033[0m
+
+            Set the IEEE 802.15.4 MAC Key.
+        \033[2m
+            > mackey 00112233445566778899aabbccddeeff
+            Done
+        \033[0m
+        """
+        # self.wpan_api.prop_set_value(, hex_to_bytes("0801"+("1000"+line)*3), )
+        self.handle_property("0801"+("1000"+line)*3, SPINEL.PROP_RCP_MAC_KEY, 'D')
+        
+    def do_sendraw(self, line):
+        """
+        \033[1msendraw <hex-encoded raw data>\033[0m
+
+            Set raw data (hex).
+        \033[2m
+            > sendraw 4242
+            Done
+        \033[0m
+        """
+        # a bit hacky but it works!™
+        raw_bytes = pack('H', int(len(line)/2)) + util.hex_to_bytes(line+'0b')
+        self.prop_set_value(SPINEL.PROP_STREAM_RAW, raw_bytes, str(len(raw_bytes))+'s')
 
     def do_child(self, line):
         """\033[1m
@@ -1662,8 +1726,8 @@ class SpinelCliCmd(Cmd, SpinelCodec):
         """
         self.wpan_api.cmd_reset()
 
-        self.prop_set_value(SPINEL.PROP_IPv6_ICMP_PING_OFFLOAD, 1)
-        self.prop_set_value(SPINEL.PROP_THREAD_RLOC16_DEBUG_PASSTHRU, 1)
+        # self.prop_set_value(SPINEL.PROP_IPv6_ICMP_PING_OFFLOAD, 1)
+        # self.prop_set_value(SPINEL.PROP_THREAD_RLOC16_DEBUG_PASSTHRU, 1)
 
     def complete_route(self, text, _line, _begidx, _endidx):
         """ Subcommand completion handler for route command. """
@@ -2107,7 +2171,6 @@ class SpinelCliCmd(Cmd, SpinelCodec):
         macfilter rss add <extaddr> <rssi>
 
             Set the received signal strength for the messages from the IEEE802.15.4 Extended Address.
-            If extaddr is \*, default received signal strength for all received messages would be set.
 
             > macfilter rss add * -50
             Done
@@ -2118,7 +2181,7 @@ class SpinelCliCmd(Cmd, SpinelCodec):
         macfilter rss remove <extaddr>
 
             Removes the received signal strength or received link quality setting on the Extended Address.
-            If extaddr is \*, default received signal strength or link quality for all received messages would be unset.
+            If extaddr is *, default received signal strength or link quality for all received messages would be unset.
 
             > macfilter rss remove *
             Done
@@ -2470,6 +2533,7 @@ def main():
                    (SpinelCliCmd, vendor_ext.VendorSpinelCliCmd), {})
         shell = cls(stream, nodeid=options.nodeid, vendor_module=vendor_module)
     except ImportError:
+        print("Vendor module unavailable")
         shell = SpinelCliCmd(stream,
                              nodeid=options.nodeid,
                              vendor_module=vendor_module)
