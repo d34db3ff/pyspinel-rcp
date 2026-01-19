@@ -184,6 +184,7 @@ class SpinelCliCmd(Cmd, SpinelCodec):
                                               SPINEL.HEADER_ASYNC)
             
         self.prop_set_value(SPINEL.PROP_PHY_ENABLED, 1)
+        self.prop_set_value(SPINEL.PROP_MAC_RAW_STREAM_ENABLED, 1)
 
     command_names = [
         # Shell commands
@@ -628,16 +629,19 @@ class SpinelCliCmd(Cmd, SpinelCodec):
         
     def do_sendraw(self, line):
         """
-        \033[1msendraw <hex-encoded raw data>\033[0m
+        \033[1msendraw <channel ID in hex> <hex-encoded raw data>\033[0m
 
             Set raw data (hex).
         \033[2m
-            > sendraw 4242
+            > sendraw 13 4242
             Done
         \033[0m
+            The above sends raw data 0x4242 over channel 19
         """
+        params = line.split(" ")
+        params[1] += '0000' # The dummy FCS value will get fixed by the physical layer
         # a bit hacky but it works!™
-        raw_bytes = pack('H', int(len(line)/2)) + util.hex_to_bytes(line+'0b')
+        raw_bytes = pack('H', int(len(params[1])/2)) + util.hex_to_bytes(params[1]+params[0])
         self.prop_set_value(SPINEL.PROP_STREAM_RAW, raw_bytes, str(len(raw_bytes))+'s')
 
     def do_child(self, line):
