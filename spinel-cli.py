@@ -641,7 +641,7 @@ class SpinelCliCmd(Cmd, SpinelCodec):
         params = line.split(" ")
         params[1] += '0000' # The dummy FCS value will get fixed by the physical layer
         # a bit hacky but it works!™
-        raw_bytes = pack('H', int(len(params[1])/2)) + util.hex_to_bytes(params[1]+params[0])
+        raw_bytes = pack('H', int(len(params[1])/2)) + util.hex_to_bytes(params[1]+params[0]+'000001000001')
         self.prop_set_value(SPINEL.PROP_STREAM_RAW, raw_bytes, str(len(raw_bytes))+'s')
 
     def do_child(self, line):
